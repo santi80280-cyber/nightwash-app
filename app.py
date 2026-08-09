@@ -123,4 +123,4 @@ if st.button("🚀 Generar Collage y Notificar", type="primary", use_container_w
             </a>
         ''', unsafe_allow_html=True)
         
-        st.info("💡 **Tip de envío:** Al tocar el botón verde, se abrirá WhatsApp con el mensaje redactado. Solo presiona el icono de adjuntar imagen y selecciona el collage que acabas de guardar.") mensaje redactado. Solo debes presionar el icono de adjuntar imagen y seleccionar el collage que acabas de guardar.")
+        st.info("💡 **Tip de envío:** Al tocar el botón verde, se abrirá WhatsApp con el mensaje redactado. Solo presiona el icono de adjuntar imagen y selecciona el collage que acabas de guardar.")
