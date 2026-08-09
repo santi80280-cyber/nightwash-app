@@ -10,7 +10,7 @@ import json
 # Configuración de la página
 st.set_page_config(page_title="NightWash App", page_icon="🚗", layout="centered")
 
-# 🔗 URL actualizada de Google Apps Script
+# 🔗 URL de Google Apps Script
 GOOGLE_SHEETS_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycby9T1uhW6ab76eCUM1Hp_B6K4boE-UO-AdmQEVNLTH7f5v-P18S8IEAFCGXyzo6TSc5NQ/exec"
 
 st.title("🌙 NightWash App")
@@ -145,4 +145,4 @@ else:
                 📲 2. Abrir WhatsApp para Enviar Mensaje
             </button>
         </a>
-    ''', unsafe_allow_html=True)w_html=True)
+    ''', unsafe_allow_html=True)
