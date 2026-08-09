@@ -34,7 +34,6 @@ st.markdown("---")
 st.markdown("### 📸 Registro Fotográfico (4 Vistas)")
 st.caption("📱 *Al tocar cada botón se abrirá la cámara principal de tu celular.*")
 
-# Se agregó "webp" a la lista de formatos permitidos para evitar errores de carga
 col1, col2 = st.columns(2)
 with col1:
     f_frontal = st.file_uploader("1. Vista Frontal", type=["jpg", "jpeg", "png", "webp"], key="cam1")
@@ -47,6 +46,30 @@ with col2:
 photos = [f_frontal, f_trasera, f_izq, f_der]
 
 st.markdown("---")
+
+# Función para enviar datos a Google Sheets/Drive al descargar
+def registrar_en_google(byte_im, nombre_archivo_unico, cliente_nombre, placa, telefono_limpio, ahora):
+    try:
+        imagen_b64 = base64.b64encode(byte_im).decode('utf-8')
+        payload = {
+            "fecha": ahora.strftime("%Y-%m-%d"),
+            "hora": ahora.strftime("%H:%M:%S"),
+            "cliente": cliente_nombre,
+            "placa": placa,
+            "telefono": telefono_limpio,
+            "archivo": nombre_archivo_unico,
+            "imagen_base64": imagen_b64
+        }
+        res = requests.post(
+            GOOGLE_SHEETS_WEBHOOK_URL, 
+            data=json.dumps(payload),
+            headers={"Content-Type": "application/json"},
+            timeout=15
+        )
+        if "OK" in res.text or res.status_code == 200:
+            st.toast("📊 ¡Servicio y Foto guardados exitosamente en Drive y Sheets!", icon="✅")
+    except Exception as error:
+        st.caption(f"ℹ️ Error de conexión con Google: {error}")
 
 # 3. Procesamiento y Generación de Collage
 if not cliente_nombre or not placa or not telefono_limpio:
@@ -87,41 +110,16 @@ else:
     
     st.success("✅ ¡Collage de inspección generado!")
     st.image(byte_im, caption=f"Reporte Visual - Placa: {placa}", use_container_width=True)
-    
-    # ENVÍO AUTOMÁTICO A GOOGLE SHEETS Y GOOGLE DRIVE
-    try:
-        imagen_b64 = base64.b64encode(byte_im).decode('utf-8')
-        
-        payload = {
-            "fecha": ahora.strftime("%Y-%m-%d"),
-            "hora": ahora.strftime("%H:%M:%S"),
-            "cliente": cliente_nombre,
-            "placa": placa,
-            "telefono": telefono_limpio,
-            "archivo": nombre_archivo_unico,
-            "imagen_base64": imagen_b64
-        }
-        
-        res = requests.post(
-            GOOGLE_SHEETS_WEBHOOK_URL, 
-            data=json.dumps(payload),
-            headers={"Content-Type": "application/json"},
-            timeout=15
-        )
-        if "OK" in res.text or res.status_code == 200:
-            st.toast("📊 ¡Servicio y Foto guardados en Drive y Sheets!", icon="✅")
-        else:
-            st.warning(f"⚠️ Google Sheets respondió con estado: {res.status_code}")
-    except Exception as error:
-        st.error(f"❌ No se pudo conectar con Google: {error}")
 
-    # 1. BOTÓN DE DESCARGA DIRECTA
+    # 1. BOTÓN DE DESCARGA DIRECTA (Solo cuando se presiona envía a Google)
     st.download_button(
-        label="📥 1. Guardar Collage en Celular",
+        label="📥 1. Guardar Collage en Celular y Registrar en Google",
         data=byte_im,
         file_name=nombre_archivo_unico,
         mime="image/jpeg",
-        use_container_width=True
+        use_container_width=True,
+        on_click=registrar_en_google,
+        args=(byte_im, nombre_archivo_unico, cliente_nombre, placa, telefono_limpio, ahora)
     )
     
     # 2. ENLACE A WHATSAPP
