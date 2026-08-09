@@ -10,8 +10,8 @@ import json
 # Configuración de la página
 st.set_page_config(page_title="NightWash App", page_icon="🚗", layout="centered")
 
-# URL de tu Webhook de Google Apps Script
-GOOGLE_SHEETS_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbx2-bawInWnrqN-CUbDEKQb59ZTYMZZkKOGo8NReMo3Z-1GioINj_cIPzUmRzdsvJSfUw/exec"
+# 🔗 URL actualizada de Google Apps Script
+GOOGLE_SHEETS_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycby9T1uhW6ab76eCUM1Hp_B6K4boE-UO-AdmQEVNLTH7f5v-P18S8IEAFCGXyzo6TSc5NQ/exec"
 
 st.title("🌙 NightWash App")
 st.subheader("Registro de Inspección y Notificación Nocturna")
@@ -96,7 +96,6 @@ else:
             "telefono": telefono_limpio,
             "archivo": nombre_archivo_unico
         }
-        # Enviamos los datos formateados como texto/JSON explícito para Google
         res = requests.post(
             GOOGLE_SHEETS_WEBHOOK_URL, 
             data=json.dumps(payload),
@@ -106,7 +105,7 @@ else:
         if "OK" in res.text or res.status_code == 200:
             st.toast("📊 ¡Servicio registrado exitosamente en Google Sheets!", icon="✅")
         else:
-            st.warning(f"⚠️ Google Sheets respondió: {res.text}")
+            st.warning(f"⚠️ Google Sheets respondió con estado: {res.status_code}")
     except Exception as error:
         st.error(f"❌ No se pudo conectar con Google Sheets: {error}")
 
@@ -146,4 +145,4 @@ else:
                 📲 2. Abrir WhatsApp para Enviar Mensaje
             </button>
         </a>
-    ''', unsafe_allow_html=True)
+    ''', unsafe_allow_html=True)w_html=True)
