@@ -18,7 +18,7 @@ st.markdown("### 📋 Datos del Vehículo y Cliente")
 cliente_nombre = st.text_input("Nombre del Vecino / Cliente", placeholder="Ej: Carlos Gómez")
 placa = st.text_input("Placa del Vehículo", placeholder="Ej: ABC123").upper()
 
-# Campo de teléfono que limpia espacios, guiones y el '+' automáticamente al pegar
+# Campo de teléfono
 telefono_raw = st.text_input("WhatsApp del Cliente (Puedes copiar y pegar desde contactos)", placeholder="Ej: +57 300 123 4567")
 
 # Limpieza del número de teléfono
@@ -26,17 +26,18 @@ telefono_limpio = re.sub(r'\D', '', telefono_raw) # Deja solo dígitos
 
 st.markdown("---")
 
-# 2. Captura de Fotos con la Cámara del Celular
+# 2. Captura de Fotos activando la Cámara Nativa del Celular
 st.markdown("### 📸 Registro Fotográfico (4 Vistas)")
+st.caption("📱 *Al tocar cada botón se abrirá la cámara principal de tu celular.*")
 
 col1, col2 = st.columns(2)
 with col1:
-    f_frontal = st.camera_input("1. Vista Frontal", key="cam1")
-    f_trasera = st.camera_input("2. Vista Trasera", key="cam2")
+    f_frontal = st.file_uploader("1. Vista Frontal", type=["jpg", "jpeg", "png"], key="cam1")
+    f_trasera = st.file_uploader("2. Vista Trasera", type=["jpg", "jpeg", "png"], key="cam2")
 
 with col2:
-    f_izq = st.camera_input("3. Lado Izquierdo", key="cam3")
-    f_der = st.camera_input("4. Lado Derecho", key="cam4")
+    f_izq = st.file_uploader("3. Lado Izquierdo", type=["jpg", "jpeg", "png"], key="cam3")
+    f_der = st.file_uploader("4. Lado Derecho", type=["jpg", "jpeg", "png"], key="cam4")
 
 photos = [f_frontal, f_trasera, f_izq, f_der]
 
@@ -47,7 +48,7 @@ if st.button("🚀 Generar Collage y Notificar", type="primary", use_container_w
     if not cliente_nombre or not placa or not telefono_limpio:
         st.error("⚠️ Por favor completa el nombre, la placa y el número de WhatsApp.")
     elif not all(photos):
-        st.warning("⚠️ Debes tomar las 4 fotos para completar la inspección.")
+        st.warning("⚠️ Debes tomar o subir las 4 fotos para completar la inspección.")
     else:
         # Cargar imágenes capturadas
         imgs = [Image.open(p).convert("RGB") for p in photos]
