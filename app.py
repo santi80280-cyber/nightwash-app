@@ -11,7 +11,7 @@ import base64
 # Configuración de la página
 st.set_page_config(page_title="NightWash App", page_icon="🚗", layout="centered")
 
-# 🔗 Tu nueva URL de Google Apps Script integrada
+# 🔗 URL de Google Apps Script
 GOOGLE_SHEETS_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbwFPqY_v-eWyJ7Fyng7bIFvqr4ai3A2BmjZP1uhLSaFYfaq1EzkCR-JjJo8fhGP907eOg/exec"
 
 st.title("🌙 NightWash App")
@@ -85,7 +85,7 @@ def generar_collage(photos, titulo_estado, placa, cliente_nombre, fecha_str):
     collage.save(buf, format="JPEG", quality=90)
     return buf.getvalue()
 
-# Función para enviar a Google al hacer descarga
+# Función para enviar a Google al hacer descarga del "Después"
 def registrar_en_google_ambos(b_antes, b_despues, file_antes, file_despues, cliente_nombre, placa, telefono_limpio, ahora):
     try:
         b64_antes = base64.b64encode(b_antes).decode('utf-8')
@@ -135,20 +135,30 @@ else:
     with col_v1:
         st.markdown("**🔴 Estado Inicial (ANTES)**")
         st.image(b_antes, use_container_width=True)
+        # BOTÓN 1: Descargar SOLO el ANTES (sin guardar en Google)
+        st.download_button(
+            label="📥 Descargar Foto ANTES",
+            data=b_antes,
+            file_name=file_antes,
+            mime="image/jpeg",
+            use_container_width=True
+        )
+
     with col_v2:
         st.markdown("**🟢 Estado Final (DESPUÉS)**")
         st.image(b_despues, use_container_width=True)
-
-    # Botones de descarga y registro
-    st.download_button(
-        label="📥 1. Guardar Fotos en Celular y Registrar en Google (Antes y Después)",
-        data=b_despues,
-        file_name=file_despues,
-        mime="image/jpeg",
-        use_container_width=True,
-        on_click=registrar_en_google_ambos,
-        args=(b_antes, b_despues, file_antes, file_despues, cliente_nombre, placa, telefono_limpio, ahora)
-    )
+        # BOTÓN 2: Descargar DESPUÉS Y REGISTRAR EN GOOGLE (Ambas fotos)
+        st.download_button(
+            label="📥 Descargar Foto DESPUÉS y Registrar en Google",
+            data=b_despues,
+            file_name=file_despues,
+            mime="image/jpeg",
+            use_container_width=True,
+            on_click=registrar_en_google_ambos,
+            args=(b_antes, b_despues, file_antes, file_despues, cliente_nombre, placa, telefono_limpio, ahora)
+        )
+    
+    st.markdown("---")
     
     msg = (
         f"✨ *¡Hola {cliente_nombre}!* ✨\n\n"
@@ -170,9 +180,8 @@ else:
                 font-weight:bold; 
                 cursor:pointer; 
                 width:100%;
-                margin-top:10px;
                 box-shadow: 0px 4px 10px rgba(0,0,0,0.2);">
-                📲 2. Abrir WhatsApp para Enviar Mensaje
+                📲 Abrir WhatsApp para Enviar Mensaje
             </button>
         </a>
     ''', unsafe_allow_html=True)
