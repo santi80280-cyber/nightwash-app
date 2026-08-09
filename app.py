@@ -4,9 +4,13 @@ import io
 import urllib.parse
 import datetime
 import re
+import requests
 
 # Configuración de la página
 st.set_page_config(page_title="NightWash App", page_icon="🚗", layout="centered")
+
+# 🔗 PEGA AQUÍ LA URL DE TU GOOGLE APPS SCRIPT ENTRE LAS COMILLAS
+GOOGLE_SHEETS_WEBHOOK_URL = "PEGA_AQUI_TU_URL_DE_GOOGLE_APPS_SCRIPT"
 
 st.title("🌙 NightWash App")
 st.subheader("Registro de Inspección y Notificación Nocturna")
@@ -18,15 +22,12 @@ st.markdown("### 📋 Datos del Vehículo y Cliente")
 cliente_nombre = st.text_input("Nombre del Vecino / Cliente", placeholder="Ej: Carlos Gómez")
 placa = st.text_input("Placa del Vehículo", placeholder="Ej: ABC123").upper()
 
-# Campo de teléfono
 telefono_raw = st.text_input("WhatsApp del Cliente (Puedes copiar y pegar desde contactos)", placeholder="Ej: +57 300 123 4567")
-
-# Limpieza del número de teléfono
-telefono_limpio = re.sub(r'\D', '', telefono_raw) # Deja solo dígitos
+telefono_limpio = re.sub(r'\D', '', telefono_raw)
 
 st.markdown("---")
 
-# 2. Captura de Fotos activando la Cámara Nativa del Celular
+# 2. Captura de Fotos
 st.markdown("### 📸 Registro Fotográfico (4 Vistas)")
 st.caption("📱 *Al tocar cada botón se abrirá la cámara principal de tu celular.*")
 
@@ -43,84 +44,96 @@ photos = [f_frontal, f_trasera, f_izq, f_der]
 
 st.markdown("---")
 
-# 3. Procesamiento y Generación de Collage
-if st.button("🚀 Generar Collage y Notificar", type="primary", use_container_width=True):
-    if not cliente_nombre or not placa or not telefono_limpio:
-        st.error("⚠️ Por favor completa el nombre, la placa y el número de WhatsApp.")
-    elif not all(photos):
-        st.warning("⚠️ Debes tomar o subir las 4 fotos para completar la inspección.")
-    else:
-        # Cargar imágenes capturadas
-        imgs = [Image.open(p).convert("RGB") for p in photos]
-        
-        # Redimensionar cuadrantes (600x450 px cada uno)
-        w, h = 600, 450
-        imgs_resized = [img.resize((w, h)) for img in imgs]
-        
-        # Crear lienzo para el collage (2x2 fotos + encabezado superior)
-        canvas_w = w * 2
-        canvas_h = (h * 2) + 120
-        
-        collage = Image.new("RGB", (canvas_w, canvas_h), "#0F172A") # Fondo oscuro profesional
-        draw = ImageDraw.Draw(collage)
-        
-        # Agregar datos al encabezado del collage
-        fecha_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
-        draw.text((30, 25), "NIGHTWASH - REGISTRO DE INSPECCIÓN EXTERIOR", fill="#38BDF8")
-        draw.text((30, 65), f"Vehículo: {placa}  |  Cliente: {cliente_nombre}  |  Fecha: {fecha_str}", fill="#FFFFFF")
-        
-        # Pegar las 4 fotos en la grilla
-        collage.paste(imgs_resized[0], (0, 120))
-        collage.paste(imgs_resized[1], (w, 120))
-        collage.paste(imgs_resized[2], (0, 120 + h))
-        collage.paste(imgs_resized[3], (w, 120 + h))
-        
-        # Convertir collage a bytes para descargar e inspeccionar
-        buf = io.BytesIO()
-        collage.save(buf, format="JPEG", quality=90)
-        byte_im = buf.getvalue()
-        
-        st.success("✅ ¡Collage generado con éxito!")
-        
-        # Mostrar vista previa
-        st.image(byte_im, caption=f"Reporte Visual - Placa: {placa}", use_container_width=True)
-        
-        # Botón para guardar la foto en la galería del celular
-        st.download_button(
-            label="📥 Guardar Collage en Galería",
-            data=byte_im,
-            file_name=f"NightWash_{placa}_{datetime.date.today()}.jpg",
-            mime="image/jpeg",
-            use_container_width=True
-        )
-        
-        # Crear enlace a WhatsApp con el mensaje predeterminado
-        msg = (
-            f"✨ *¡Hola {cliente_nombre}!* ✨\n\n"
-            f"🚗 Tu vehículo con placa *{placa}* ya ha sido lavado exteriormente y ha quedado impecable.\n\n"
-            f"🌙 *NightWash* cuidó tu carro esta noche para que disfrutes tu día mañana sin perder tiempo.\n\n"
-            f"*(Te adjunto en este chat el reporte fotográfico de la inspección)*"
-        )
-        encoded_msg = urllib.parse.quote(msg)
-        wa_url = f"https://wa.me/{telefono_limpio}?text={encoded_msg}"
-        
-        st.markdown("---")
-        st.markdown(f'''
-            <a href="{wa_url}" target="_blank">
-                <button style="
-                    background-color:#22C55E; 
-                    color:white; 
-                    padding:16px 20px; 
-                    border:none; 
-                    border-radius:10px; 
-                    font-size:16px;
-                    font-weight:bold; 
-                    cursor:pointer; 
-                    width:100%;
-                    box-shadow: 0px 4px 10px rgba(0,0,0,0.2);">
-                    📲 Abrir WhatsApp para Enviar Mensaje
-                </button>
-            </a>
-        ''', unsafe_allow_html=True)
-        
-        st.info("💡 **Tip de envío:** Al tocar el botón verde, se abrirá WhatsApp con el mensaje redactado. Solo presiona el icono de adjuntar imagen y selecciona el collage que acabas de guardar.")
+# 3. Procesamiento
+if not cliente_nombre or not placa or not telefono_limpio:
+    st.info("👋 Ingresa los datos del cliente y captura las 4 fotos para generar el collage.")
+elif not all(photos):
+    st.warning("⚠️ Debes capturar las 4 fotos para completar la inspección.")
+else:
+    # Cargar imágenes
+    imgs = [Image.open(p).convert("RGB") for p in photos]
+    w, h = 600, 450
+    imgs_resized = [img.resize((w, h)) for img in imgs]
+    
+    # Crear lienzo de collage
+    canvas_w, canvas_h = w * 2, (h * 2) + 120
+    collage = Image.new("RGB", (canvas_w, canvas_h), "#0F172A")
+    draw = ImageDraw.Draw(collage)
+    
+    ahora = datetime.datetime.now()
+    fecha_str = ahora.strftime("%Y-%m-%d %H:%M:%S")
+    timestamp_filename = ahora.strftime("%Y%m%d_%H%M%S")
+    nombre_archivo_unico = f"NightWash_{placa}_{timestamp_filename}.jpg"
+    
+    # Encabezado
+    draw.text((30, 25), "NIGHTWASH - REGISTRO DE INSPECCIÓN EXTERIOR", fill="#38BDF8")
+    draw.text((30, 65), f"Vehículo: {placa}  |  Cliente: {cliente_nombre}  |  Fecha: {fecha_str}", fill="#FFFFFF")
+    
+    # Grilla de fotos
+    collage.paste(imgs_resized[0], (0, 120))
+    collage.paste(imgs_resized[1], (w, 120))
+    collage.paste(imgs_resized[2], (0, 120 + h))
+    collage.paste(imgs_resized[3], (w, 120 + h))
+    
+    # Guardar en memoria
+    buf = io.BytesIO()
+    collage.save(buf, format="JPEG", quality=90)
+    byte_im = buf.getvalue()
+    
+    st.success("✅ ¡Collage de inspección generado!")
+    st.image(byte_im, caption=f"Reporte Visual - Placa: {placa}", use_container_width=True)
+    
+    # ENVÍO AUTOMÁTICO A GOOGLE SHEETS
+    if GOOGLE_SHEETS_WEBHOOK_URL and "https://script.google.com/macros/s/AKfycbx2-bawInWnrqN-CUbDEKQb59ZTYMZZkKOGo8NReMo3Z-1GioINj_cIPzUmRzdsvJSfUw/exec" not in GOOGLE_SHEETS_WEBHOOK_URL:
+        try:
+            payload = {
+                "fecha": ahora.strftime("%Y-%m-%d"),
+                "hora": ahora.strftime("%H:%M:%S"),
+                "cliente": cliente_nombre,
+                "placa": placa,
+                "telefono": telefono_limpio,
+                "archivo": nombre_archivo_unico
+            }
+            res = requests.post(GOOGLE_SHEETS_WEBHOOK_URL, json=payload, timeout=5)
+            if res.status_code == 200:
+                st.toast("📊 ¡Servicio guardado automáticamente en Google Sheets!", icon="✅")
+        except Exception:
+            pass
+
+    # 1. BOTÓN DE DESCARGA DIRECTA
+    st.download_button(
+        label="📥 1. Guardar Collage en Celular",
+        data=byte_im,
+        file_name=nombre_archivo_unico,
+        mime="image/jpeg",
+        use_container_width=True
+    )
+    
+    # 2. ENLACE A WHATSAPP
+    msg = (
+        f"✨ *¡Hola {cliente_nombre}!* ✨\n\n"
+        f"🚗 Tu vehículo con placa *{placa}* ya ha sido lavado exteriormente y ha quedado impecable.\n\n"
+        f"🌙 *NightWash* cuidó tu carro esta noche para que disfrutes tu día mañana sin perder tiempo.\n\n"
+        f"*(Te adjunto en este chat el reporte fotográfico de la inspección)*"
+    )
+    encoded_msg = urllib.parse.quote(msg)
+    wa_url = f"https://wa.me/{telefono_limpio}?text={encoded_msg}"
+    
+    st.markdown(f'''
+        <a href="{wa_url}" target="_blank">
+            <button style="
+                background-color:#22C55E; 
+                color:white; 
+                padding:16px 20px; 
+                border:none; 
+                border-radius:10px; 
+                font-size:16px;
+                font-weight:bold; 
+                cursor:pointer; 
+                width:100%;
+                margin-top:10px;
+                box-shadow: 0px 4px 10px rgba(0,0,0,0.2);">
+                📲 2. Abrir WhatsApp para Enviar Mensaje
+            </button>
+        </a>
+    ''', unsafe_allow_html=True)
