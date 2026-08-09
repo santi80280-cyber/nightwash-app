@@ -28,16 +28,15 @@ st.markdown("---")
 
 # 2. Captura de Fotos con la Cámara del Celular
 st.markdown("### 📸 Registro Fotográfico (4 Vistas)")
-st.caption("📸 **Nota:** Toca el botón 🔄 dentro de la cámara para cambiar a la **Cámara Trasera**.")
 
 col1, col2 = st.columns(2)
 with col1:
-    f_frontal = st.camera_input("1. Vista Frontal")
-    f_trasera = st.camera_input("2. Vista Trasera")
+    f_frontal = st.camera_input("1. Vista Frontal", key="cam1")
+    f_trasera = st.camera_input("2. Vista Trasera", key="cam2")
 
 with col2:
-    f_izq = st.camera_input("3. Lado Izquierdo")
-    f_der = st.camera_input("4. Lado Derecho")
+    f_izq = st.camera_input("3. Lado Izquierdo", key="cam3")
+    f_der = st.camera_input("4. Lado Derecho", key="cam4")
 
 photos = [f_frontal, f_trasera, f_izq, f_der]
 
