@@ -5,11 +5,12 @@ import urllib.parse
 import datetime
 import re
 import requests
+import json
 
 # Configuración de la página
 st.set_page_config(page_title="NightWash App", page_icon="🚗", layout="centered")
 
-# URL de tu Webhook de Google Apps Script integrado
+# URL de tu Webhook de Google Apps Script
 GOOGLE_SHEETS_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbx2-bawInWnrqN-CUbDEKQb59ZTYMZZkKOGo8NReMo3Z-1GioINj_cIPzUmRzdsvJSfUw/exec"
 
 st.title("🌙 NightWash App")
@@ -22,13 +23,13 @@ st.markdown("### 📋 Datos del Vehículo y Cliente")
 cliente_nombre = st.text_input("Nombre del Vecino / Cliente", placeholder="Ej: Carlos Gómez")
 placa = st.text_input("Placa del Vehículo", placeholder="Ej: ABC123").upper()
 
-# Campo de teléfono con limpieza automática de dígitos
+# Campo de teléfono con limpieza automática
 telefono_raw = st.text_input("WhatsApp del Cliente (Puedes copiar y pegar desde contactos)", placeholder="Ej: +57 300 123 4567")
 telefono_limpio = re.sub(r'\D', '', telefono_raw)
 
 st.markdown("---")
 
-# 2. Captura de Fotos con la Cámara del Celular
+# 2. Captura de Fotos
 st.markdown("### 📸 Registro Fotográfico (4 Vistas)")
 st.caption("📱 *Al tocar cada botón se abrirá la cámara principal de tu celular.*")
 
@@ -56,28 +57,28 @@ else:
     w, h = 600, 450
     imgs_resized = [img.resize((w, h)) for img in imgs]
     
-    # Crear lienzo de collage (2x2 fotos + encabezado superior)
+    # Crear lienzo de collage
     canvas_w, canvas_h = w * 2, (h * 2) + 120
     collage = Image.new("RGB", (canvas_w, canvas_h), "#0F172A")
     draw = ImageDraw.Draw(collage)
     
-    # Fecha y Hora exactas con segundos para identificador único
+    # Identificador de tiempo único
     ahora = datetime.datetime.now()
     fecha_str = ahora.strftime("%Y-%m-%d %H:%M:%S")
     timestamp_filename = ahora.strftime("%Y%m%d_%H%M%S")
     nombre_archivo_unico = f"NightWash_{placa}_{timestamp_filename}.jpg"
     
-    # Agregar datos al encabezado del collage
+    # Encabezado
     draw.text((30, 25), "NIGHTWASH - REGISTRO DE INSPECCIÓN EXTERIOR", fill="#38BDF8")
     draw.text((30, 65), f"Vehículo: {placa}  |  Cliente: {cliente_nombre}  |  Fecha: {fecha_str}", fill="#FFFFFF")
     
-    # Pegar las 4 fotos en la grilla
+    # Grilla de fotos
     collage.paste(imgs_resized[0], (0, 120))
     collage.paste(imgs_resized[1], (w, 120))
     collage.paste(imgs_resized[2], (0, 120 + h))
     collage.paste(imgs_resized[3], (w, 120 + h))
     
-    # Convertir collage a bytes
+    # Convertir a bytes
     buf = io.BytesIO()
     collage.save(buf, format="JPEG", quality=90)
     byte_im = buf.getvalue()
@@ -85,7 +86,7 @@ else:
     st.success("✅ ¡Collage de inspección generado!")
     st.image(byte_im, caption=f"Reporte Visual - Placa: {placa}", use_container_width=True)
     
-    # ENVÍO AUTOMÁTICO DE DATOS A GOOGLE SHEETS
+    # ENVÍO AUTOMÁTICO A GOOGLE SHEETS
     try:
         payload = {
             "fecha": ahora.strftime("%Y-%m-%d"),
@@ -95,13 +96,21 @@ else:
             "telefono": telefono_limpio,
             "archivo": nombre_archivo_unico
         }
-        res = requests.post(GOOGLE_SHEETS_WEBHOOK_URL, json=payload, timeout=5)
-        if res.status_code == 200:
-            st.toast("📊 ¡Servicio guardado automáticamente en Google Sheets!", icon="✅")
-    except Exception:
-        st.caption("ℹ️ Nota: No se pudo conectar a Google Sheets temporalmente.")
+        # Enviamos los datos formateados como texto/JSON explícito para Google
+        res = requests.post(
+            GOOGLE_SHEETS_WEBHOOK_URL, 
+            data=json.dumps(payload),
+            headers={"Content-Type": "application/json"},
+            timeout=8
+        )
+        if "OK" in res.text or res.status_code == 200:
+            st.toast("📊 ¡Servicio registrado exitosamente en Google Sheets!", icon="✅")
+        else:
+            st.warning(f"⚠️ Google Sheets respondió: {res.text}")
+    except Exception as error:
+        st.error(f"❌ No se pudo conectar con Google Sheets: {error}")
 
-    # 1. BOTÓN DE DESCARGA DIRECTA EN CELULAR (SIN RECARGA DE PÁGINA)
+    # 1. BOTÓN DE DESCARGA DIRECTA
     st.download_button(
         label="📥 1. Guardar Collage en Celular",
         data=byte_im,
