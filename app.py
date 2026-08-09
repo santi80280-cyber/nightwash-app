@@ -11,7 +11,7 @@ import base64
 # Configuración de la página
 st.set_page_config(page_title="NightWash App", page_icon="🚗", layout="centered")
 
-# 🔗 Tu nueva URL de Google Apps Script integrada
+# 🔗 URL de Google Apps Script
 GOOGLE_SHEETS_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyxJOn5Dy59OpOs23jiSYs6uw8XoKImaKhTPNTrpKl-hp92ZJHEigJ8ynRO4UZQTNq6/exec"
 
 st.title("🌙 NightWash App")
@@ -24,24 +24,25 @@ st.markdown("### 📋 Datos del Vehículo y Cliente")
 cliente_nombre = st.text_input("Nombre del Vecino / Cliente", placeholder="Ej: Carlos Gómez")
 placa = st.text_input("Placa del Vehículo", placeholder="Ej: ABC123").upper()
 
-# Campo de teléfono con limpieza automática de caracteres especiales
+# Campo de teléfono con limpieza automática
 telefono_raw = st.text_input("WhatsApp del Cliente (Puedes copiar y pegar desde contactos)", placeholder="Ej: +57 300 123 4567")
 telefono_limpio = re.sub(r'\D', '', telefono_raw)
 
 st.markdown("---")
 
-# 2. Captura de Fotos con la Cámara del Celular
+# 2. Captura de Fotos (Soporta JPG, JPEG, PNG y WEBP)
 st.markdown("### 📸 Registro Fotográfico (4 Vistas)")
 st.caption("📱 *Al tocar cada botón se abrirá la cámara principal de tu celular.*")
 
+# Se agregó "webp" a la lista de formatos permitidos para evitar errores de carga
 col1, col2 = st.columns(2)
 with col1:
-    f_frontal = st.file_uploader("1. Vista Frontal", type=["jpg", "jpeg", "png"], key="cam1")
-    f_trasera = st.file_uploader("2. Vista Trasera", type=["jpg", "jpeg", "png"], key="cam2")
+    f_frontal = st.file_uploader("1. Vista Frontal", type=["jpg", "jpeg", "png", "webp"], key="cam1")
+    f_trasera = st.file_uploader("2. Vista Trasera", type=["jpg", "jpeg", "png", "webp"], key="cam2")
 
 with col2:
-    f_izq = st.file_uploader("3. Lado Izquierdo", type=["jpg", "jpeg", "png"], key="cam3")
-    f_der = st.file_uploader("4. Lado Derecho", type=["jpg", "jpeg", "png"], key="cam4")
+    f_izq = st.file_uploader("3. Lado Izquierdo", type=["jpg", "jpeg", "png", "webp"], key="cam3")
+    f_der = st.file_uploader("4. Lado Derecho", type=["jpg", "jpeg", "png", "webp"], key="cam4")
 
 photos = [f_frontal, f_trasera, f_izq, f_der]
 
@@ -58,12 +59,12 @@ else:
     w, h = 600, 450
     imgs_resized = [img.resize((w, h)) for img in imgs]
     
-    # Crear lienzo de collage (2x2 fotos + encabezado superior)
+    # Crear lienzo de collage
     canvas_w, canvas_h = w * 2, (h * 2) + 120
     collage = Image.new("RGB", (canvas_w, canvas_h), "#0F172A")
     draw = ImageDraw.Draw(collage)
     
-    # Identificador de tiempo único para evitar sobreescrituras
+    # Identificador de tiempo único
     ahora = datetime.datetime.now()
     fecha_str = ahora.strftime("%Y-%m-%d %H:%M:%S")
     timestamp_filename = ahora.strftime("%Y%m%d_%H%M%S")
@@ -79,7 +80,7 @@ else:
     collage.paste(imgs_resized[2], (0, 120 + h))
     collage.paste(imgs_resized[3], (w, 120 + h))
     
-    # Convertir a bytes para la transmisión
+    # Convertir a bytes
     buf = io.BytesIO()
     collage.save(buf, format="JPEG", quality=90)
     byte_im = buf.getvalue()
@@ -114,7 +115,7 @@ else:
     except Exception as error:
         st.error(f"❌ No se pudo conectar con Google: {error}")
 
-    # 1. BOTÓN DE DESCARGA DIRECTA (GUARDA EN MEMORIA LOCAL)
+    # 1. BOTÓN DE DESCARGA DIRECTA
     st.download_button(
         label="📥 1. Guardar Collage en Celular",
         data=byte_im,
