@@ -9,8 +9,8 @@ import requests
 # Configuración de la página
 st.set_page_config(page_title="NightWash App", page_icon="🚗", layout="centered")
 
-# 🔗 PEGA AQUÍ LA URL DE TU GOOGLE APPS SCRIPT ENTRE LAS COMILLAS
-GOOGLE_SHEETS_WEBHOOK_URL = "PEGA_AQUI_TU_URL_DE_GOOGLE_APPS_SCRIPT"
+# URL de tu Webhook de Google Apps Script integrado
+GOOGLE_SHEETS_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbx2-bawInWnrqN-CUbDEKQb59ZTYMZZkKOGo8NReMo3Z-1GioINj_cIPzUmRzdsvJSfUw/exec"
 
 st.title("🌙 NightWash App")
 st.subheader("Registro de Inspección y Notificación Nocturna")
@@ -22,12 +22,13 @@ st.markdown("### 📋 Datos del Vehículo y Cliente")
 cliente_nombre = st.text_input("Nombre del Vecino / Cliente", placeholder="Ej: Carlos Gómez")
 placa = st.text_input("Placa del Vehículo", placeholder="Ej: ABC123").upper()
 
+# Campo de teléfono con limpieza automática de dígitos
 telefono_raw = st.text_input("WhatsApp del Cliente (Puedes copiar y pegar desde contactos)", placeholder="Ej: +57 300 123 4567")
 telefono_limpio = re.sub(r'\D', '', telefono_raw)
 
 st.markdown("---")
 
-# 2. Captura de Fotos
+# 2. Captura de Fotos con la Cámara del Celular
 st.markdown("### 📸 Registro Fotográfico (4 Vistas)")
 st.caption("📱 *Al tocar cada botón se abrirá la cámara principal de tu celular.*")
 
@@ -44,38 +45,39 @@ photos = [f_frontal, f_trasera, f_izq, f_der]
 
 st.markdown("---")
 
-# 3. Procesamiento
+# 3. Procesamiento y Generación de Collage
 if not cliente_nombre or not placa or not telefono_limpio:
     st.info("👋 Ingresa los datos del cliente y captura las 4 fotos para generar el collage.")
 elif not all(photos):
     st.warning("⚠️ Debes capturar las 4 fotos para completar la inspección.")
 else:
-    # Cargar imágenes
+    # Cargar imágenes capturadas
     imgs = [Image.open(p).convert("RGB") for p in photos]
     w, h = 600, 450
     imgs_resized = [img.resize((w, h)) for img in imgs]
     
-    # Crear lienzo de collage
+    # Crear lienzo de collage (2x2 fotos + encabezado superior)
     canvas_w, canvas_h = w * 2, (h * 2) + 120
     collage = Image.new("RGB", (canvas_w, canvas_h), "#0F172A")
     draw = ImageDraw.Draw(collage)
     
+    # Fecha y Hora exactas con segundos para identificador único
     ahora = datetime.datetime.now()
     fecha_str = ahora.strftime("%Y-%m-%d %H:%M:%S")
     timestamp_filename = ahora.strftime("%Y%m%d_%H%M%S")
     nombre_archivo_unico = f"NightWash_{placa}_{timestamp_filename}.jpg"
     
-    # Encabezado
+    # Agregar datos al encabezado del collage
     draw.text((30, 25), "NIGHTWASH - REGISTRO DE INSPECCIÓN EXTERIOR", fill="#38BDF8")
     draw.text((30, 65), f"Vehículo: {placa}  |  Cliente: {cliente_nombre}  |  Fecha: {fecha_str}", fill="#FFFFFF")
     
-    # Grilla de fotos
+    # Pegar las 4 fotos en la grilla
     collage.paste(imgs_resized[0], (0, 120))
     collage.paste(imgs_resized[1], (w, 120))
     collage.paste(imgs_resized[2], (0, 120 + h))
     collage.paste(imgs_resized[3], (w, 120 + h))
     
-    # Guardar en memoria
+    # Convertir collage a bytes
     buf = io.BytesIO()
     collage.save(buf, format="JPEG", quality=90)
     byte_im = buf.getvalue()
@@ -83,24 +85,23 @@ else:
     st.success("✅ ¡Collage de inspección generado!")
     st.image(byte_im, caption=f"Reporte Visual - Placa: {placa}", use_container_width=True)
     
-    # ENVÍO AUTOMÁTICO A GOOGLE SHEETS
-    if GOOGLE_SHEETS_WEBHOOK_URL and "https://script.google.com/macros/s/AKfycbx2-bawInWnrqN-CUbDEKQb59ZTYMZZkKOGo8NReMo3Z-1GioINj_cIPzUmRzdsvJSfUw/exec" not in GOOGLE_SHEETS_WEBHOOK_URL:
-        try:
-            payload = {
-                "fecha": ahora.strftime("%Y-%m-%d"),
-                "hora": ahora.strftime("%H:%M:%S"),
-                "cliente": cliente_nombre,
-                "placa": placa,
-                "telefono": telefono_limpio,
-                "archivo": nombre_archivo_unico
-            }
-            res = requests.post(GOOGLE_SHEETS_WEBHOOK_URL, json=payload, timeout=5)
-            if res.status_code == 200:
-                st.toast("📊 ¡Servicio guardado automáticamente en Google Sheets!", icon="✅")
-        except Exception:
-            pass
+    # ENVÍO AUTOMÁTICO DE DATOS A GOOGLE SHEETS
+    try:
+        payload = {
+            "fecha": ahora.strftime("%Y-%m-%d"),
+            "hora": ahora.strftime("%H:%M:%S"),
+            "cliente": cliente_nombre,
+            "placa": placa,
+            "telefono": telefono_limpio,
+            "archivo": nombre_archivo_unico
+        }
+        res = requests.post(GOOGLE_SHEETS_WEBHOOK_URL, json=payload, timeout=5)
+        if res.status_code == 200:
+            st.toast("📊 ¡Servicio guardado automáticamente en Google Sheets!", icon="✅")
+    except Exception:
+        st.caption("ℹ️ Nota: No se pudo conectar a Google Sheets temporalmente.")
 
-    # 1. BOTÓN DE DESCARGA DIRECTA
+    # 1. BOTÓN DE DESCARGA DIRECTA EN CELULAR (SIN RECARGA DE PÁGINA)
     st.download_button(
         label="📥 1. Guardar Collage en Celular",
         data=byte_im,
