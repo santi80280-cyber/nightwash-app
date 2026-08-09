@@ -3,6 +3,7 @@ from PIL import Image, ImageDraw
 import io
 import urllib.parse
 import datetime
+import re
 
 # Configuración de la página
 st.set_page_config(page_title="NightWash App", page_icon="🚗", layout="centered")
@@ -16,13 +17,18 @@ st.markdown("---")
 st.markdown("### 📋 Datos del Vehículo y Cliente")
 cliente_nombre = st.text_input("Nombre del Vecino / Cliente", placeholder="Ej: Carlos Gómez")
 placa = st.text_input("Placa del Vehículo", placeholder="Ej: ABC123").upper()
-telefono = st.text_input("WhatsApp del Cliente (con código de país sin el +)", placeholder="Ej: 573001234567")
+
+# Campo de teléfono que limpia espacios, guiones y el '+' automáticamente al pegar
+telefono_raw = st.text_input("WhatsApp del Cliente (Puedes copiar y pegar desde contactos)", placeholder="Ej: +57 300 123 4567")
+
+# Limpieza del número de teléfono
+telefono_limpio = re.sub(r'\D', '', telefono_raw) # Deja solo dígitos
 
 st.markdown("---")
 
 # 2. Captura de Fotos con la Cámara del Celular
 st.markdown("### 📸 Registro Fotográfico (4 Vistas)")
-st.caption("Toma las 4 fotos del exterior del vehículo:")
+st.caption("📸 **Nota:** Toca el botón 🔄 dentro de la cámara para cambiar a la **Cámara Trasera**.")
 
 col1, col2 = st.columns(2)
 with col1:
@@ -39,7 +45,7 @@ st.markdown("---")
 
 # 3. Procesamiento y Generación de Collage
 if st.button("🚀 Generar Collage y Notificar", type="primary", use_container_width=True):
-    if not cliente_nombre or not placa or not telefono:
+    if not cliente_nombre or not placa or not telefono_limpio:
         st.error("⚠️ Por favor completa el nombre, la placa y el número de WhatsApp.")
     elif not all(photos):
         st.warning("⚠️ Debes tomar las 4 fotos para completar la inspección.")
@@ -96,7 +102,7 @@ if st.button("🚀 Generar Collage y Notificar", type="primary", use_container_w
             f"*(Te adjunto en este chat el reporte fotográfico de la inspección)*"
         )
         encoded_msg = urllib.parse.quote(msg)
-        wa_url = f"https://wa.me/{telefono}?text={encoded_msg}"
+        wa_url = f"https://wa.me/{telefono_limpio}?text={encoded_msg}"
         
         st.markdown("---")
         st.markdown(f'''
@@ -117,4 +123,4 @@ if st.button("🚀 Generar Collage y Notificar", type="primary", use_container_w
             </a>
         ''', unsafe_allow_html=True)
         
-        st.info("💡 **Tip de envío:** Al tocar el botón verde, se abrirá WhatsApp con el mensaje redactado. Solo debes presionar el icono de adjuntar imagen y seleccionar el collage que acabas de guardar.")
+        st.info("💡 **Tip de envío:** Al tocar el botón verde, se abrirá WhatsApp con el mensaje redactado. Solo presiona el icono de adjuntar imagen y selecciona el collage que acabas de guardar.") mensaje redactado. Solo debes presionar el icono de adjuntar imagen y seleccionar el collage que acabas de guardar.")
